@@ -4,6 +4,9 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const connectDB = require("./db");
+const Room = require("./models/Room");
+const Game = require("./models/Game");
 
 const PORT = process.env.PORT || 4000;
 const HAND_SIZE = 7;
@@ -31,7 +34,15 @@ const blackCardsSeed = [
   "Тестовете на Велчев водят до ___.",
   "Отсъствах заради ___.",
   "Мис Петрова(Пантера) днес е в настроение, защото ___.",
-  "Фашингът се помни с ___."
+  "Фашингът се помни с ___.",
+  "Първото междучасие винаги е за ___.",
+  "Вакарелски чу \"Ваканция\" и си помисли ___.",
+  "Kaiser-ът на НЕГ се знае с ___.",
+  "Изпитът винаги е полят, когато ___.",
+  "Най-голямата разлика между Leistung и DSD е ___.",
+  "Всеки заек в Немската знае за ___.",
+  "Завършилите НЕГ се връщат да преподават, заради ___.",
+  "Учениците се сближават най-много покрай ___."
 ];
 
 const whiteCardsSeed = [
@@ -70,13 +81,51 @@ const whiteCardsSeed = [
   "сезонна депресия",
   "Раденка",
   "седянка по физическо",
+  "гиросите на гърба на НЕG",
+  "Шефката",
+  "фурнетите в лафката",
+  "1,2,3...12!",
+  "пуш-пауза на оградата",
+  "бърза дрямка",
+  "белот на последния чин",
+  "пищов в джоба",
+  "поредното закъснение",
+  "огромният ни двор",
+  "дрескодът на Нели Георгиева",
+  "синият аутфит на г-жа Цуцуманова",
+  "липсата на тоалетна хартия",
+  "общия кенеф на втория етаж",
+  "да те хванат с пищов",
+  "футбол на двора"
 ];
 
 const app = express();
+connectDB(); // Connect to MongoDB
+
+
 app.use(cors());
+app.use(express.json());
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+// Create room endpoint
+app.post("/create-room", async (req, res) => {
+  try {
+    const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const room = new Room({
+      code: roomCode,
+      players: [req.body.name || "Player"],
+    });
+
+    await room.save();
+    res.json({ ok: true, roomCode, room });
+  } catch (error) {
+    console.error("Error creating room:", error);
+    res.status(500).json({ ok: false, message: "Failed to create room" });
+  }
+});
+
 const server = http.createServer(app);
+// Socket.IO configuration
 const io = new Server(server, {
   cors: {
     origin: "*"
@@ -88,6 +137,33 @@ const io = new Server(server, {
  * key: roomCode, value: room object
  */
 const rooms = {};
+
+// Save room state to MongoDB
+async function saveRoom(room) {
+  try {
+    await Game.findOneAndUpdate(
+      { roomCode: room.code },
+      {
+        roomCode: room.code,
+        players: room.players.map(p => ({
+          name: p.name,
+          score: p.score,
+          hand: p.hand,
+          socketId: p.id
+        })),
+        currentRound: room.round,
+        blackCard: room.currentBlackCard,
+        whiteCardsPlayed: new Map(room.submittedAnswers.map(e => [e.playerId, [e.cardText]])),
+        czarSocketId: room.players[room.judgeIndex]?.id || null,
+        gameStatus: room.status,
+        roundWinner: room.winners?.[0]?.name || null
+      },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.error("Error saving room to MongoDB:", err);
+  }
+}
 
 function shuffle(array) {
   const copy = [...array];
@@ -185,6 +261,7 @@ function startRound(room) {
     }
   });
 
+  saveRoom(room); // Save to MongoDB
   emitRoomState(room);
 }
 
@@ -238,6 +315,7 @@ function removePlayerFromRoom(socketId) {
     tryMoveToJudging(room);
   }
 
+  saveRoom(room); // Save to MongoDB
   emitRoomState(room);
 }
 
@@ -275,6 +353,7 @@ io.on("connection", (socket) => {
 
     rooms[roomCode] = room;
     socket.join(roomCode);
+    saveRoom(room); // Save to MongoDB
     callback({ ok: true, roomCode });
     emitRoomState(room);
   });
@@ -304,6 +383,7 @@ io.on("connection", (socket) => {
       hand: []
     });
     socket.join(cleanCode);
+    saveRoom(room); // Save to MongoDB
     callback({ ok: true, roomCode: cleanCode });
     emitRoomState(room);
   });
@@ -383,6 +463,7 @@ io.on("connection", (socket) => {
       cardText: chosenCard
     });
 
+    saveRoom(room); // Save to MongoDB
     callback({ ok: true });
     tryMoveToJudging(room);
     emitRoomState(room);
@@ -420,6 +501,7 @@ io.on("connection", (socket) => {
     );
 
     room.status = "round-end";
+    saveRoom(room); // Save to MongoDB
     emitRoomState(room);
     callback({ ok: true });
 
@@ -436,6 +518,7 @@ io.on("connection", (socket) => {
         refreshedRoom.winners = getWinningPlayers(refreshedRoom.players);
         refreshedRoom.currentBlackCard = null;
         refreshedRoom.submittedAnswers = [];
+        saveRoom(refreshedRoom); // Save to MongoDB
         io.to(refreshedRoom.code).emit("systemMessage", `Играта приключи след ${MAX_ROUNDS} рунда.`);
         emitRoomState(refreshedRoom);
         return;

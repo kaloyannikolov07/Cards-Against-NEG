@@ -22,7 +22,6 @@ function Game({ state, onSubmitAnswer, onChooseWinner }) {
           <article className="prompt-zone">
             <p className="zone-label">♠️ Round Challenge</p>
             <div className="card black-card prompt-card">
-              <span className="prompt-chip">Prompt</span>
               {state.currentBlackCard}
             </div>
             <p className="game-status-line">
@@ -62,16 +61,22 @@ function Game({ state, onSubmitAnswer, onChooseWinner }) {
               <h3>🎯 Pick the funniest/best answer</h3>
               <p className="answers-subtitle">Tap a card to award the point.</p>
               <div className="cards-grid">
-                {state.submittedAnswers.map((answer, index) => (
-                  <button
-                    key={answer.id}
-                    type="button"
-                    className={`card white-card selectable-card judge-select-card answer-card answer-tilt-${index % 6}`}
-                    onClick={() => onChooseWinner(answer.id)}
-                  >
-                    {answer.cardText}
-                  </button>
-                ))}
+                {state.submittedAnswers.map((answer, index) => {
+                  const suits = ["♠️", "♥️", "♣️", "♦️"];
+                  const suit = suits[index % 4];
+                  return (
+                    <button
+                      key={answer.id}
+                      type="button"
+                      className={`card white-card selectable-card judge-select-card answer-card answer-tilt-${index % 6}`}
+                      onClick={() => onChooseWinner(answer.id)}
+                    >
+                      <span className="card-suit-top-left">{suit}</span>
+                      {answer.cardText}
+                      <span className="card-suit-bottom-right">{suit}</span>
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
