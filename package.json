@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "cd server && npm start",
-    "build": "cd client && npm install && npm run build",
-    "install:all": "cd server && npm install && cd ../client && npm install"
+    "start": "npm start --prefix server",
+    "build": "npm run build --prefix client",
+    "install": "npm install --prefix server && npm install --prefix client"
   },
   "engines": {
     "node": ">=18.0.0"
