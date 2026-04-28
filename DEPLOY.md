@@ -11,9 +11,10 @@
    | Setting | Value |
    |---------|-------|
    | Name | cards-against-neg |
+   | Root Directory | `server` |
    | Region | Frankfurt (or closest) |
    | Branch | main |
-   | Build Command | (leave empty for server) |
+   | Build Command | (leave empty) |
    | Start Command | `npm start` |
 
 6. Click "Create Web Service"
@@ -49,6 +50,7 @@ You need a MongoDB database. Two free options:
    | Setting | Value |
    |---------|-------|
    | Name | cards-against-neg-client |
+   | Root Directory | `client` |
    | Build Command | `npm install && npm run build` |
    | Publish Directory | `dist` |
 
