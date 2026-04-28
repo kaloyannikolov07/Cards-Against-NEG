@@ -112,8 +112,8 @@ app.get("/health", (_, res) => res.json({ ok: true }));
 
 // Serve static files in production
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../dist")));
-  app.get("*", (_, res) => res.sendFile(path.join(__dirname, "../dist/index.html")));
+  app.use(express.static(path.join(__dirname, "./dist")));
+  app.get("*", (_, res) => res.sendFile(path.join(__dirname, "./dist/index.html")));
 }
 
 // Create room endpoint

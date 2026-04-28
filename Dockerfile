@@ -2,21 +2,23 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies for both server and client
-COPY server/package*.json server/
-RUN cd server && npm install
+# Copy package files
+COPY package.json server/package.json client/package.json ./
 
-COPY client/package*.json client/
-RUN cd client && npm install
+# Install all dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build the client
-RUN cd client && npm run build
+RUN npm run build
 
 # Expose port
 EXPOSE 4000
+
+# Start the server
+CMD ["npm", "start"]
 
 # Start the server
 CMD ["sh", "-c", "cd server && node server.js"]
