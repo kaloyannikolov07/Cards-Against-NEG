@@ -22,7 +22,23 @@
 
 After creating the service, go to "Environment" tab and add:
 
-- No variables needed for server (uses PORT from Render)
+- `MONGO_URI` = your MongoDB connection string (see below)
+
+## Database Setup (Required)
+
+You need a MongoDB database. Two free options:
+
+### Option 1: MongoDB Atlas (Recommended)
+1. Go to [mongodb.com](https://mongodb.com) → Free cluster
+2. Create account, build database
+3. Create user and get connection string
+4. Add to Render env vars: `MONGO_URI` = `mongodb+srv://username:password@cluster.xxx.mongodb.net/cards-against-neg`
+
+### Option 2: Render Managed Database
+1. In Render dashboard: New → "MongoDB"
+2. Wait for it to provision
+3. Copy the connection string
+4. Add to your web service env vars
 
 ## Client Deployment
 

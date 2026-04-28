@@ -17,6 +17,7 @@ const blackCardsSeed = [
   "Краузе го нямаше, защото ___!",
   "Каназирска чете конско, защото ___.",
   "Манова написа отсъствия, защото ___.",
+  "Манова написа отсъствия, защото ___.",
   "Най-големия стрес в НЕГ е ___.",
   "Нено влезе и каза: ___.",
   "Най-доброто оправдание за закъснение: ___.",
@@ -100,7 +101,9 @@ const whiteCardsSeed = [
 ];
 
 const app = express();
-connectDB(); // Connect to MongoDB
+
+// Connect to MongoDB (async, don't block server start)
+connectDB().catch(console.error);
 
 
 app.use(cors());
