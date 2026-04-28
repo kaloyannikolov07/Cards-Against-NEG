@@ -8,9 +8,7 @@ const connectDB = require("./db");
 const Room = require("./models/Room");
 const Game = require("./models/Game");
 
-// const PORT = process.env.PORT || 4000;
-const port = process.env.PORT || 3000;
-app.listen(port);
+const PORT = process.env.PORT || 4000;
 const HAND_SIZE = 7;
 const MIN_PLAYERS = 3;
 const MAX_ROUNDS = 15;
@@ -103,14 +101,20 @@ const whiteCardsSeed = [
 ];
 
 const app = express();
+const path = require("path");
 
 // Connect to MongoDB (async, don't block server start)
 connectDB().catch(console.error);
 
-
 app.use(cors());
 app.use(express.json());
 app.get("/health", (_, res) => res.json({ ok: true }));
+
+// Serve static files in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../dist")));
+  app.get("*", (_, res) => res.sendFile(path.join(__dirname, "../dist/index.html")));
+}
 
 // Create room endpoint
 app.post("/create-room", async (req, res) => {
