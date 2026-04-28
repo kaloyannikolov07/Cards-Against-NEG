@@ -8,7 +8,9 @@ const connectDB = require("./db");
 const Room = require("./models/Room");
 const Game = require("./models/Game");
 
-const PORT = process.env.PORT || 4000;
+// const PORT = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
+app.listen(port);
 const HAND_SIZE = 7;
 const MIN_PLAYERS = 3;
 const MAX_ROUNDS = 15;
