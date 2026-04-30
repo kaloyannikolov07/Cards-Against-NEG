@@ -16,6 +16,3 @@ ENV NODE_ENV=production
 EXPOSE 4000
 
 CMD ["npm", "start"]
-
-# Start the server
-CMD ["sh", "-c", "cd server && node server.js"]
