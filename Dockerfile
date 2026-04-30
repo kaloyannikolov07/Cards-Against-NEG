@@ -1,23 +1,20 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json server/package.json client/package.json ./
+COPY package*.json ./
+COPY server/package*.json ./server/
+COPY client/package*.json ./client/
 
-# Install all dependencies
 RUN npm install
 
-# Copy source code
 COPY . .
 
-# Build the client
 RUN npm run build
 
-# Expose port
+ENV NODE_ENV=production
 EXPOSE 4000
 
-# Start the server
 CMD ["npm", "start"]
 
 # Start the server

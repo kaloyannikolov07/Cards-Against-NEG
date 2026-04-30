@@ -4,7 +4,7 @@ import Lobby from "./components/Lobby";
 import Game from "./components/Game";
 import EndScreen from "./components/EndScreen";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.origin;
 
 function App() {
   const socket = useMemo(() => io(SERVER_URL, { autoConnect: true }), []);
