@@ -94,3 +94,48 @@ NODE_ENV=production npm start
 - You do not need `VITE_SERVER_URL` on Railway because the client connects to `window.location.origin`.
 - If you deploy the client separately later, then set `VITE_SERVER_URL` to the backend URL before building the client.
 - The `/health` route can be used as a quick backend check.
+
+# Deploy Frontend to Vercel
+
+Vercel is a good fit for the React/Vite frontend, but not for this Socket.IO backend. Keep the backend on Railway and deploy only the client to Vercel.
+
+## 1. Deploy the backend first
+
+Deploy the backend with the Railway steps above. Copy the public Railway URL, for example:
+
+```text
+https://cards-against-neg-production.up.railway.app
+```
+
+## 2. Create the Vercel project
+
+1. Go to https://vercel.com
+2. Click **Add New...** -> **Project**
+3. Import this GitHub repository
+4. Keep the project root as the repository root
+
+The included `vercel.json` tells Vercel to build the client and publish `client/dist`.
+
+## 3. Add Vercel environment variables
+
+In Vercel, open **Project Settings** -> **Environment Variables** and add:
+
+```text
+VITE_SERVER_URL=https://your-railway-backend-url
+```
+
+Add it for Production, Preview, and Development if you want all deployments to connect to the same backend.
+
+## 4. Deploy
+
+Vercel will run:
+
+```bash
+npm run build --prefix client
+```
+
+Because Vercel sets the `VERCEL` environment variable, the Vite build outputs to `client/dist`. For Railway builds, it still outputs to `server/dist`.
+
+## Important Vercel Note
+
+Do not move `server/server.js` into a Vercel Function unless the realtime logic is rewritten. Socket.IO needs a persistent Node server for the multiplayer rooms.
