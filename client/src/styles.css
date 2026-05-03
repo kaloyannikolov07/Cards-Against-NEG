@@ -665,10 +665,51 @@ button:active:not(:disabled) {
   color: #203650;
 }
 
+.answers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .answers-subtitle {
   margin: 5px 0 12px;
   color: #4f6580;
   font-weight: 700;
+}
+
+.btn-swap {
+  flex: 0 0 auto;
+  background: linear-gradient(180deg, #14b8a6 0%, #0f9488 100%);
+  box-shadow:
+    0 8px 0 #0b6f66,
+    0 14px 24px rgba(15, 118, 110, 0.3);
+}
+
+.btn-swap:hover:not(:disabled) {
+  box-shadow:
+    0 9px 0 #0b6f66,
+    0 18px 26px rgba(15, 118, 110, 0.34);
+}
+
+.round-result {
+  display: grid;
+  gap: 10px;
+}
+
+.round-result-label {
+  margin: 0;
+  color: #4f6580;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.round-result-card {
+  max-width: 420px;
+  min-height: 120px;
 }
 
 .game-status-line {
@@ -739,6 +780,10 @@ button:active:not(:disabled) {
   .game-topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .answers-header {
+    display: grid;
   }
 
   .game-table {

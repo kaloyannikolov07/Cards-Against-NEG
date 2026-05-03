@@ -1,11 +1,14 @@
 function PlayerList({ players, currentJudgeId, hostId, variant = "default" }) {
   const isScoreboard = variant === "scoreboard";
+  const visiblePlayers = isScoreboard
+    ? [...players].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    : players;
 
   return (
     <div className={`panel ${isScoreboard ? "scoreboard-panel" : ""}`}>
       <h3>{isScoreboard ? "🎲 Scoreboard" : "Players"}</h3>
       <ul className="player-list">
-        {players.map((player, index) => {
+        {visiblePlayers.map((player, index) => {
           const isJudge = player.id === currentJudgeId;
           const isHost = player.id === hostId;
           const initials = player.name

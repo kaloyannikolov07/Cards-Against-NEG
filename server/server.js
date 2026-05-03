@@ -11,7 +11,8 @@ const Game = require("./models/Game");
 const PORT = process.env.PORT || 4000;
 const HAND_SIZE = 7;
 const MIN_PLAYERS = 3;
-const MAX_ROUNDS = 15;
+const MAX_ROUNDS = 10;
+const ROUND_RESULT_MS = 4000;
 
 const blackCardsSeed = [
   "Краузе го нямаше, защото ___!",
@@ -158,14 +159,16 @@ async function saveRoom(room) {
           name: p.name,
           score: p.score,
           hand: p.hand,
-          socketId: p.id
+          socketId: p.id,
+          hasSwappedCards: p.hasSwappedCards
         })),
         currentRound: room.round,
         blackCard: room.currentBlackCard,
         whiteCardsPlayed: new Map(room.submittedAnswers.map(e => [e.playerId, [e.cardText]])),
         czarSocketId: room.players[room.judgeIndex]?.id || null,
         gameStatus: room.status,
-        roundWinner: room.winners?.[0]?.name || null
+        roundWinner: room.roundResult?.winnerName || room.winners?.[0]?.name || null,
+        roundResult: room.roundResult
       },
       { upsert: true, new: true }
     );
@@ -201,6 +204,10 @@ function drawCard(deck, seedCards) {
     deck.push(...createDeck(seedCards));
   }
   return deck.pop();
+}
+
+function drawHand(deck, seedCards) {
+  return Array.from({ length: HAND_SIZE }, () => drawCard(deck, seedCards));
 }
 
 function findPlayer(room, socketId) {
@@ -242,10 +249,12 @@ function buildStateForPlayer(room, playerId) {
     myId: me ? me.id : null,
     myHand: me ? me.hand : [],
     hasSubmitted: me ? room.submittedAnswers.some((entry) => entry.playerId === me.id) : false,
+    hasSwappedCards: me ? Boolean(me.hasSwappedCards) : false,
     minPlayers: MIN_PLAYERS,
     maxRounds: MAX_ROUNDS,
     gameEnded: room.gameEnded,
-    winners: room.winners
+    winners: room.winners,
+    roundResult: room.roundResult
   };
 }
 
@@ -260,14 +269,10 @@ function startRound(room) {
   room.status = "answering";
   room.currentBlackCard = drawCard(room.blackDeck, blackCardsSeed);
   room.submittedAnswers = [];
+  room.roundResult = null;
 
   room.players.forEach((player, index) => {
-    // Only non-judge players need cards this round.
-    if (index !== room.judgeIndex) {
-      while (player.hand.length < HAND_SIZE) {
-        player.hand.push(drawCard(room.whiteDeck, whiteCardsSeed));
-      }
-    }
+    player.hand = index === room.judgeIndex ? [] : drawHand(room.whiteDeck, whiteCardsSeed);
   });
 
   saveRoom(room); // Save to MongoDB
@@ -317,6 +322,7 @@ function removePlayerFromRoom(socketId) {
     room.status = "lobby";
     room.gameEnded = false;
     room.winners = [];
+    room.roundResult = null;
     room.currentBlackCard = null;
     room.submittedAnswers = [];
     io.to(room.code).emit("systemMessage", "Недостатъчно играчи. Играта се върна в лобито.");
@@ -346,6 +352,7 @@ io.on("connection", (socket) => {
       judgeIndex: 0,
       gameEnded: false,
       winners: [],
+      roundResult: null,
       currentBlackCard: null,
       submittedAnswers: [],
       blackDeck: createDeck(blackCardsSeed),
@@ -355,7 +362,8 @@ io.on("connection", (socket) => {
           id: socket.id,
           name: trimmedName,
           score: 0,
-          hand: []
+          hand: [],
+          hasSwappedCards: false
         }
       ]
     };
@@ -376,6 +384,10 @@ io.on("connection", (socket) => {
       callback({ ok: false, message: "Стаята не съществува." });
       return;
     }
+    if (room.started || room.status !== "lobby") {
+      callback({ ok: false, message: "Game already started. You cannot join this room now." });
+      return;
+    }
     if (room.players.length >= 10) {
       callback({ ok: false, message: "Стаята е пълна (макс. 10)." });
       return;
@@ -389,7 +401,8 @@ io.on("connection", (socket) => {
       id: socket.id,
       name: trimmedName,
       score: 0,
-      hand: []
+      hand: [],
+      hasSwappedCards: false
     });
     socket.join(cleanCode);
     saveRoom(room); // Save to MongoDB
@@ -418,6 +431,7 @@ io.on("connection", (socket) => {
     room.status = "answering";
     room.gameEnded = false;
     room.winners = [];
+    room.roundResult = null;
     room.round = 0;
     room.judgeIndex = 0;
     room.currentBlackCard = null;
@@ -428,6 +442,7 @@ io.on("connection", (socket) => {
     room.players.forEach((player) => {
       player.score = 0;
       player.hand = [];
+      player.hasSwappedCards = false;
     });
 
     startRound(room);
@@ -464,7 +479,6 @@ io.on("connection", (socket) => {
     if (removeIndex > -1) {
       player.hand.splice(removeIndex, 1);
     }
-    player.hand.push(drawCard(room.whiteDeck, whiteCardsSeed));
 
     room.submittedAnswers.push({
       id: `${socket.id}-${Date.now()}`,
@@ -475,6 +489,42 @@ io.on("connection", (socket) => {
     saveRoom(room); // Save to MongoDB
     callback({ ok: true });
     tryMoveToJudging(room);
+    emitRoomState(room);
+  });
+
+  socket.on("swapCards", (_, callback = () => {}) => {
+    const room = Object.values(rooms).find((entry) =>
+      entry.players.some((player) => player.id === socket.id)
+    );
+    if (!room || !room.started || room.status !== "answering") {
+      callback({ ok: false, message: "You cannot swap cards right now." });
+      return;
+    }
+
+    const judge = room.players[room.judgeIndex];
+    if (judge?.id === socket.id) {
+      callback({ ok: false, message: "The judge cannot swap cards this round." });
+      return;
+    }
+
+    const player = findPlayer(room, socket.id);
+    if (!player) {
+      callback({ ok: false, message: "You are not in a room." });
+      return;
+    }
+    if (player.hasSwappedCards) {
+      callback({ ok: false, message: "You already swapped your cards this game." });
+      return;
+    }
+    if (room.submittedAnswers.some((entry) => entry.playerId === socket.id)) {
+      callback({ ok: false, message: "You cannot swap cards after submitting an answer." });
+      return;
+    }
+
+    player.hand = drawHand(room.whiteDeck, whiteCardsSeed);
+    player.hasSwappedCards = true;
+    saveRoom(room);
+    callback({ ok: true });
     emitRoomState(room);
   });
 
@@ -503,6 +553,11 @@ io.on("connection", (socket) => {
     if (winner) {
       winner.score += 1;
     }
+    room.roundResult = {
+      winnerId: winner ? winner.id : null,
+      winnerName: winner ? winner.name : "Unknown",
+      cardText: winningSubmission.cardText
+    };
 
     io.to(room.code).emit(
       "systemMessage",
@@ -534,7 +589,7 @@ io.on("connection", (socket) => {
       }
       refreshedRoom.judgeIndex = (refreshedRoom.judgeIndex + 1) % refreshedRoom.players.length;
       startRound(refreshedRoom);
-    }, 2500);
+    }, ROUND_RESULT_MS);
   });
 
   socket.on("disconnect", () => {
@@ -542,6 +597,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server listening on port ${PORT}`);
 });
+

@@ -1,8 +1,9 @@
 import Cards from "./Cards";
 import PlayerList from "./PlayerList";
 
-function Game({ state, onSubmitAnswer, onChooseWinner }) {
+function Game({ state, onSubmitAnswer, onChooseWinner, onSwapCards }) {
   const isJudge = state.myId === state.currentJudgeId;
+  const canSwapCards = !isJudge && state.status === "answering" && !state.hasSubmitted && !state.hasSwappedCards;
 
   return (
     <div className="container game-table-wrap">
@@ -44,6 +45,14 @@ function Game({ state, onSubmitAnswer, onChooseWinner }) {
             <>
               <h3>🃏 Pick your funniest answer</h3>
               <p className="answers-subtitle">Choose one card to play this round.</p>
+              <button
+                type="button"
+                className="btn-swap"
+                onClick={onSwapCards}
+                disabled={!canSwapCards}
+              >
+                New cards
+              </button>
               <Cards cards={state.myHand} onSelect={onSubmitAnswer} disabled={false} />
             </>
           )}
@@ -85,7 +94,16 @@ function Game({ state, onSubmitAnswer, onChooseWinner }) {
             <p className="game-status-line">The judge is choosing a winner...</p>
           )}
           {state.status === "round-end" && (
-            <p className="game-status-line">Round ended. Next round starts automatically.</p>
+            <div className="round-result">
+              <p className="round-result-label">Round winner</p>
+              <h3>{state.roundResult?.winnerName || "Winner selected"}</h3>
+              {state.roundResult?.cardText && (
+                <div className="card white-card round-result-card">
+                  {state.roundResult.cardText}
+                </div>
+              )}
+              <p className="answers-subtitle">Next round starts automatically.</p>
+            </div>
           )}
         </section>
       </div>

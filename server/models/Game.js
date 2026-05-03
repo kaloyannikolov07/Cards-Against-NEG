@@ -14,6 +14,10 @@ const gameSchema = new mongoose.Schema({
     },
     hand: [String],
     socketId: String,
+    hasSwappedCards: {
+      type: Boolean,
+      default: false,
+    },
   }],
   currentRound: {
     type: Number,
@@ -35,6 +39,11 @@ const gameSchema = new mongoose.Schema({
   roundWinner: {
     type: String,
     default: null,
+  },
+  roundResult: {
+    winnerId: String,
+    winnerName: String,
+    cardText: String,
   },
   gameStatus: {
     type: String,

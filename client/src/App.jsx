@@ -4,7 +4,9 @@ import Lobby from "./components/Lobby";
 import Game from "./components/Game";
 import EndScreen from "./components/EndScreen";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.origin;
+const SERVER_URL =
+  import.meta.env.VITE_SERVER_URL ||
+  (window.location.port.startsWith("517") ? "http://localhost:4000" : window.location.origin);
 
 function App() {
   const socket = useMemo(() => io(SERVER_URL, { autoConnect: true }), []);
@@ -80,6 +82,15 @@ function App() {
     });
   }
 
+  function swapCards() {
+    setMessage("");
+    socket.emit("swapCards", {}, (result) => {
+      if (!result.ok) {
+        setMessage(result.message);
+      }
+    });
+  }
+
   const canJoinOrCreate = name.trim().length > 0;
 
   if (!roomState) {
@@ -146,7 +157,12 @@ function App() {
           <Lobby state={roomState} onStartGame={startGame} />
         )
       ) : (
-        <Game state={roomState} onSubmitAnswer={submitAnswer} onChooseWinner={chooseWinner} />
+        <Game
+          state={roomState}
+          onSubmitAnswer={submitAnswer}
+          onChooseWinner={chooseWinner}
+          onSwapCards={swapCards}
+        />
       )}
       {message && (
         <div className="container">
